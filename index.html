@@ -1,0 +1,235 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Zhed Puzzle Solver</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+
+<body>
+    <p class="size_input" align="center">
+        <button id="solve" class="btn" type="button" onclick="solve();">Solve</button>
+    </p>
+    <p class="demo">
+        <button type="button" class="btn" onclick="demo4();">Demo 4</button>
+        <button type="button" class="btn" onclick="demo5();">Demo 5</button>
+        <button type="button" class="btn" onclick="demo6();">Demo 6</button>
+        <button type="button" class="btn" onclick="demo7();">Demo 7</button>
+        <button type="button" class="btn" onclick="demo8();">Demo 8</button>
+    </p>
+
+    <div id="map"></div>
+    <div id="result"></div>
+</body>
+<script src="solver.js"></script>
+<script src="interact.min.js"></script>
+<script>
+    const rowCount = 10;
+    const columnCount = 10;
+
+    var resultDiv = document.getElementById("result");
+
+    function demo4() {
+        setupDemo(
+            [
+                new Cell(2, 4, 2),
+                new Cell(4, 2, 2),
+                new Cell(5, 3, 1),
+                new Cell(5, 5, 2)
+            ],
+            [2, 7])
+    }
+
+    function demo5() {
+        setupDemo(
+            [
+                new Cell(1, 3, 2),
+                new Cell(2, 4, 1),
+                new Cell(2, 5, 2),
+                new Cell(4, 2, 2),
+                new Cell(5, 5, 1)
+            ],
+            [7, 5])
+    }
+
+    function demo6() {
+        setupDemo(
+            [
+                new Cell(2, 2, 5),
+                new Cell(3, 1, 2),
+                new Cell(4, 1, 1),
+                new Cell(5, 3, 1),
+                new Cell(2, 5, 4),
+                new Cell(7, 1, 3)
+            ],
+            [7, 6])
+    }
+
+    function demo7() {
+        setupDemo(
+            [
+                new Cell(1, 4, 1),
+                new Cell(2, 6, 1),
+                new Cell(3, 1, 2),
+                new Cell(3, 2, 1),
+                new Cell(4, 5, 1),
+                new Cell(5, 5, 1),
+                new Cell(6, 3, 3)
+            ],
+            [5, 2]);
+    }
+
+    function demo8() {
+        setupDemo(
+            [
+                new Cell(4, 1, 4),
+                new Cell(3, 3, 3),
+                new Cell(1, 4, 2),
+                new Cell(4, 8, 2),
+                new Cell(6, 6, 1),
+                new Cell(6, 7, 1),
+                new Cell(7, 7, 1),
+                new Cell(8, 5, 2)
+            ],
+            [1, 8])
+    }
+
+    function setupDemo(cells, dest) {
+        resetMap();
+        for (var i = 0; i < cells.length; i++) {
+            var cell = cells[i];
+            setCell(cell.x, cell.y, cell.value);
+        }
+        var x = dest[0] * 50 + 40;
+        var y = dest[1] * 50 + 8;
+        var destinationDiv = document.getElementById("destination");
+        destinationDiv.setAttribute("data-y", x);
+        destinationDiv.setAttribute("data-x", y);
+        destinationDiv.style.webkitTransform =
+            destinationDiv.style.transform =
+            'translate(' + y + 'px, ' + x + 'px)';
+    }
+
+    function resetMap() {
+        for (var i = 0; i < 10; i++) {
+            for (var j = 0; j < 10; j++) {
+                setCell(i, j, 0);
+            }
+        }
+    }
+
+    function parseDivs() {
+        var cells = [];
+        for (var i = 0; i < rowCount; i++) {
+            for (var j = 0; j < columnCount; j++) {
+                var grid = document.getElementById(i + "_" + j);
+                var value = parseInt(grid.value);
+                if (value > 0) {
+                    cells.push(new Cell(i, j, value));
+                }
+            }
+        }
+
+        var destinationDiv = document.getElementById("destination");
+        var destination_x = parseInt(destinationDiv.getAttribute("data-y")); //swap them
+        var destination_y = parseInt(destinationDiv.getAttribute("data-x"));
+        var destination_y_coordinate = ((destination_y) / 50) | 0; //to int
+        var destination_x_coordinate = ((destination_x - 33) / 50) | 0; //to int
+        return [cells, new Cell(destination_x_coordinate, destination_y_coordinate)];
+    }
+
+    function solve() {
+        [cells, destination] = parseDivs();
+
+        var result2 = solve2(cells, destination);
+        var resultStr = "destination = [" + (destination.x + 1) + ", " + (destination.y + 1) + "]<br>";
+
+        if (result2 == undefined) {
+            resultDiv.innerHTML = resultStr + "cannot solve";
+            return;
+        }
+        var result = result2[1];
+        var orderedCells = result2[0];
+        for (var i = 0; i < orderedCells.length; i++) {
+            var cell = orderedCells[i];
+            resultStr += "[" + (cell.x + 1) + "," + (cell.y + 1) + "] (" + cell.value + ")" + " - " + result[i] +
+                "<br>";
+        }
+        resultDiv.innerHTML = resultStr;
+    }
+
+    function setCell(i, j, value = null) { //i = horizontal, j = vertical
+        var grid = document.getElementById(i + "_" + j);
+        if (value != null) {
+            if (value == 0) {
+                grid.value = null;
+            } else {
+                grid.value = value;
+            }
+        }
+        if (parseInt(grid.value) > 0) {
+            grid.classList.add("cell");
+        } else {
+            grid.classList.remove("cell");
+        }
+    }
+
+    function create() {
+        resultDiv.innerHTML = "";
+        var map = document.getElementById("map");
+        var mapHtml = "<div id=\"destination\" class=\"draggable\">O</div>";
+        for (var i = 0; i < rowCount; i++) {
+            mapHtml += "<div>"
+            for (var j = 0; j < columnCount; j++) {
+                mapHtml +=
+                    `<input type="number" class="square" min="0" id="${i}_${j}" onclick="setCell(${i}, ${j});" />`;
+            }
+            mapHtml += "</div>";
+        }
+        map.innerHTML = mapHtml;
+    }
+    create();
+
+
+    // target elements with the "draggable" class
+    interact('.draggable')
+        .draggable({
+            // keep the element within the area of it's parent
+            restrict: {
+                restriction: "parent",
+                endOnly: true,
+                elementRect: {
+                    top: 0,
+                    left: 0,
+                    bottom: 1,
+                    right: 1
+                }
+            },
+            // enable autoScroll
+            autoScroll: true,
+
+            // call this function on every dragmove event
+            onmove: dragMoveListener
+        });
+
+    function dragMoveListener(event) {
+        var target = event.target,
+            // keep the dragged position in the data-x/data-y attributes
+            x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx,
+            y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+        // translate the element
+        target.style.webkitTransform =
+            target.style.transform =
+            'translate(' + x + 'px, ' + y + 'px)';
+
+        // update the position attributes
+        target.setAttribute('data-x', x);
+        target.setAttribute('data-y', y);
+    }
+
+    // this is used later in the resizing and gesture demos
+    window.dragMoveListener = dragMoveListener;
+</script>
+
+</html>
